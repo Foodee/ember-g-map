@@ -5,7 +5,7 @@ import compact from '../utils/compact';
 
 const { isEmpty, isPresent, observer, computed, run, assert, typeOf } = Ember;
 
-const allowedPolylineOptions = Ember.A(['strokeColor', 'strokeWeight', 'strokeOpacity', 'zIndex', 'geodesic', 'icons', 'clickable', 'draggable', 'visible', 'path']);
+const allowedPolylineOptions = Ember.A(['strokeColor', 'strokeWeight', 'strokeOpacity', 'zIndex', 'geodesic', 'clickable', 'draggable', 'editable', 'visible']);
 
 const GMapPolylineComponent = Ember.Component.extend({
   layout: layout,
@@ -32,13 +32,17 @@ const GMapPolylineComponent = Ember.Component.extend({
     if (isEmpty(this.get('polyline'))) {
       const options = compact(this.getProperties(allowedPolylineOptions));
       const polyline = new google.maps.Polyline(options);
+
       this.set('polyline', polyline);
     }
+
     this.setMap();
     this.setPath();
     this.updatePolylineOptions();
     this.setOnClick();
     this.setOnDrag();
+    this.setOnMouseUp();
+    this.setOnChange();
   },
 
   willDestroyElement() {
@@ -78,19 +82,10 @@ const GMapPolylineComponent = Ember.Component.extend({
   setPath() {
     const polyline = this.get('polyline');
     const coordinates = this.get('coordinates');
-    const path = this.get('path');
 
-    if (isPresent(polyline)) {
-
-      if (isPresent(coordinates) && isEmpty(path)) {
-        let coordArray = Ember.A(this.get('coordinates').mapBy('coordinate')).compact();
-        polyline.setPath(coordArray);
-      }
-
-      if (isPresent(path) && isEmpty(coordinates)) {
-        polyline.setPath(path);
-      }
-
+    if (isPresent(polyline) && isPresent(coordinates)) {
+      let coordArray = Ember.A(this.get('coordinates').mapBy('coordinate')).compact();
+      polyline.setPath(coordArray);
     }
   },
 
@@ -122,6 +117,45 @@ const GMapPolylineComponent = Ember.Component.extend({
       onClick(e, polyline);
     } else {
       this.sendAction('onClick', e, polyline);
+    }
+  },
+
+  setOnMouseUp() {
+    const polyline = this.get('polyline');
+    if (isPresent(polyline)) {
+      polyline.addListener('mouseup', (e) => this.sendOnMouseUp(e));
+    }
+  },
+
+  sendOnMouseUp(e) {
+    const { onMouseUp } = this.attrs;
+    const polyline = this.get('polyline');
+
+    if (typeOf(onMouseUp) === 'function') {
+      onMouseUp(e, polyline);
+    } else {
+      this.sendAction('onMouseUp', e, polyline);
+    }
+
+    // mouse events maybe make changes
+    this.sendOnChange(e);
+  },
+
+  setOnChange() {
+    const polyline = this.get('polyline');
+    if (isPresent(polyline)) {
+      polyline.addListener('changed', (e) => this.sendOnChange(e));
+    }
+  },
+
+  sendOnChange(e) {
+    const { onChange } = this.attrs;
+    const polyline = this.get('polyline');
+
+    if (typeOf(onChange) === 'function') {
+      onChange(e, polyline.getPath());
+    } else {
+      this.sendAction('onChange', e, polyline.getPath());
     }
   },
 

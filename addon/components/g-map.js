@@ -12,6 +12,7 @@ export default Ember.Component.extend({
     this._super();
     this.set('markers', Ember.A());
     this.set('polylines', Ember.A());
+    this.set('polygons', Ember.A());
     if (isEmpty(this.get('options'))) {
       this.set('options', {});
     }
@@ -99,6 +100,14 @@ export default Ember.Component.extend({
 
   unregisterPolyline(polyline) {
     this.get('polylines').removeObject(polyline);
+  },
+
+  registerPolygon(polygon) {
+    this.get('polygons').addObject(polygon);
+  },
+
+  unregisterPolygon(polygon) {
+    this.get('polygons').removeObject(polygon);
   },
 
   shouldFit: computed('markersFitMode', function() {
